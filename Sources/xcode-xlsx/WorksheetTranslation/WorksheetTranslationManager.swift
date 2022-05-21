@@ -45,7 +45,6 @@ class WorksheetTranslationManager {
         guard let keyRow = data.rows.first else { return }
         let keysArray = keyRow.cells.dropFirst().compactMap { $0.stringValue(sharedStrings) }
         let dataArray = data.rows.dropFirst()
-        guard keysArray.count == dataArray.count else { throw WorksheetTranslationManagerError.data }
         for row in dataArray {
             insertTranslations(rowCells: row.cells, keysArray: keysArray)
         }
