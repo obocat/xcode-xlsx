@@ -1,10 +1,14 @@
 # xcode-xlsx
-**xcode-xlsx** is a command line tool for importing translations from a `.xlsx` file to files iOS strings resources `.strings` as simple key/value pairs accordingly.
+**xcode-xlsx** is a command line tool for importing translations from a `.xlsx` file to iOS strings resources `.strings` as simple key/value pairs accordingly.
 
 # Installation
+- **Homebrew**
+```
+brew install obocat/formulae/xcode-xlsx
+```
+- **Manual**
 ```
 git clone https://github.com/obocat/xcode-xlsx.git .
-make
 make install
 ```
 
