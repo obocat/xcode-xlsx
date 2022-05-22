@@ -1,5 +1,5 @@
 # xcode-xlsx
-**xcode-xlsx** is a command line tool for importing translations from a **.xlsx** file. Treats files with the extension **.strings** as iOS strings resources and will import translations as simple key/value pairs accordingly.
+**xcode-xlsx** is a command line tool for importing translations from a `.xlsx` file to files iOS strings resources `.strings` as simple key/value pairs accordingly.
 
 # Installation
 ```
@@ -20,6 +20,5 @@ usage: xcode-xlsx infile outfile
 </p>
 
 # Requirements
-
 - swift-tools version >= 5.3
 - macOS version >= 10.11
