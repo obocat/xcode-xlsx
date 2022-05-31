@@ -9,17 +9,15 @@ let package = Package(
         .macOS(.v10_11),
     ],
     dependencies: [
-        // Dependencies declare other packages that this package depends on.
         .package(url: "https://github.com/CoreOffice/CoreXLSX.git", from: "0.9.1"),
+        .package(url: "https://github.com/mtynior/ColorizeSwift.git", from: "1.6.0"),
     ],
     targets: [
-        // Targets are the basic building blocks of a package. A target can define a module or a test suite.
-        // Targets can depend on other targets in this package, and on products in packages this package depends on.
         .target(
             name: "xcode-xlsx",
-            dependencies: ["CoreXLSX"]),
+            dependencies: ["CoreXLSX", "ColorizeSwift"]),
         .testTarget(
             name: "xcode-xlsxTests",
-            dependencies: ["xcode-xlsx"]),
+            dependencies: ["xcode-xlsx", "ColorizeSwift"]),
     ]
 )

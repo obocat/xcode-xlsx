@@ -8,21 +8,22 @@
 import Foundation
 import CoreXLSX
 
-enum WorksheetTranslationManagerError: Error, LocalizedError {
-    case sharedStrings
-    case data
-    
-    public var errorDescription: String? {
-        switch self {
-        case .sharedStrings:
-            return "XLSX shared strings not found"
-        case .data:
-            return "XLSX data error"
+final class WorksheetTranslationManager {
+
+    enum ParseError: Error, LocalizedError {
+        case sharedStrings
+        case data
+
+        public var errorDescription: String? {
+            switch self {
+            case .sharedStrings:
+                return "XLSX shared strings not found"
+            case .data:
+                return "XLSX data error"
+            }
         }
     }
-}
 
-class WorksheetTranslationManager {
     let name: String
     let file: XLSXFile
     let path: String
@@ -35,13 +36,13 @@ class WorksheetTranslationManager {
         self.file = file
         self.path = at
         self.worksheet = try file.parseWorksheet(at: self.path)
-        guard let sharedStringsTemp = try file.parseSharedStrings() else { throw WorksheetTranslationManagerError.sharedStrings }
+        guard let sharedStringsTemp = try file.parseSharedStrings() else { throw WorksheetTranslationManager.ParseError.sharedStrings }
         self.sharedStrings = sharedStringsTemp
         self.xcodeLocalizationPath = xcodeLocalizationPath
     }
     
     func insertTranslations() throws {
-        guard let data = worksheet.data else { throw WorksheetTranslationManagerError.data }
+        guard let data = worksheet.data else { throw WorksheetTranslationManager.ParseError.data }
         guard let keyRow = data.rows.first else { return }
         let keysArray = keyRow.cells.dropFirst().compactMap { $0.stringValue(sharedStrings) }
         let dataArray = data.rows.dropFirst()
@@ -57,11 +58,12 @@ class WorksheetTranslationManager {
                 let localization = Localization(key: key, value: value)
                 let value = localization.description
                 let path = URL(fileURLWithPath: "\(xcodeLocalizationPath)/\(keysArray[index])/\(name)")
-                print("Writing to \(path.path.terminalColor(color: .green)):\n\(value)")
+                print("Writing to \(path.path.green()):".terminalAction())
+                print("\(value)")
                 do {
                     try value.write(to: path)
                 } catch {
-                    let failed = "Failed".terminalColor(color: .red).appending("\n")
+                    let failed = "Failed".red().appending("\n")
                     print(failed)
                 }
             }
@@ -74,7 +76,7 @@ class Localization: CustomStringConvertible {
     private let value: String
     
     var description: String {
-        ("\"\(key)\" = \"\(value)\";").appendBreakToBothEnds
+        ("\"\(key)\" = \"\(value)\";")
     }
     
     init(key: String, value: String) {
