@@ -7,6 +7,8 @@
 
 import Foundation
 
-let terminal = Terminal()
-terminal.algorithm = XcodeXlsxImporter()
-terminal.execute()
+let terminal = ConcreteTerminal()
+let localizationImporterController = LocalizationImporterController()
+localizationImporterController.delegate = terminal
+localizationImporterController.run(arguments: CommandLine.arguments)
+exit(1)
