@@ -8,6 +8,9 @@ let package = Package(
     platforms: [
         .macOS(.v10_11),
     ],
+    products: [
+        .executable(name: "xcode-xlsx", targets: ["xcode-xlsx"]),
+    ],
     dependencies: [
         .package(url: "https://github.com/CoreOffice/CoreXLSX.git", from: "0.9.1"),
         .package(url: "https://github.com/mtynior/ColorizeSwift.git", from: "1.6.0"),
@@ -18,6 +21,7 @@ let package = Package(
             dependencies: ["CoreXLSX", "ColorizeSwift"]),
         .testTarget(
             name: "xcode-xlsxTests",
-            dependencies: ["xcode-xlsx", "ColorizeSwift"]),
+            dependencies: ["xcode-xlsx"],
+            path: "Tests"),
     ]
 )
