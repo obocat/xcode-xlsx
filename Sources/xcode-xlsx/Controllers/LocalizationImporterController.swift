@@ -24,6 +24,8 @@ final class LocalizationImporterController: Algorithm {
             }
         }
     }
+    
+    // MARK: Public Methods
 
     /// Runs the localization import process based on the provided command-line arguments.
     /// - Parameters:
@@ -44,6 +46,8 @@ final class LocalizationImporterController: Algorithm {
             delegate?.showError(error)
         }
     }
+    
+    // MARK: Private Methods
 
     /// Imports translations from the provided XLSX file to the specified Xcode localization path.
     /// - Parameters:
@@ -51,17 +55,18 @@ final class LocalizationImporterController: Algorithm {
     ///   - xcodePath: The path to the Xcode localization resource directory.
     /// - Throws: An error if there is an issue parsing or writing the localizations.
     private func importTranslations(file: XLSXFile, xcodePath: String) throws {
-        for workbook in try file.parseWorkbooks() {
-            for (name, path) in try file.parseWorksheetPathsAndNames(workbook: workbook) {
-                guard let name = name?.split(separator: " ").first else { continue }
-                delegate?.showAction("Adding translations for localization resource \(String(name).green())...")
-                let localizationController = LocalizationController(localizationResourceName: String(name),
-                                                                    xlsxFile: file,
-                                                                    workSheetPath: path,
-                                                                    xcodeLocalizationMainPath: xcodePath)
-                localizationController.delegate = delegate
-                try localizationController.parse()
-                try localizationController.write()
+        try file.parseWorkbooks().forEach {
+            try file.parseWorksheetPathsAndNames(workbook: $0).forEach {
+                if let name = $0.name?.split(separator: " ").first {
+                    delegate?.showAction("Adding translations for localization resource \(String(name).green())...")
+                    let localizationController = LocalizationController(localizationResourceName: String(name),
+                                                                        xlsxFile: file,
+                                                                        workSheetPath: $0.path,
+                                                                        xcodeLocalizationMainPath: xcodePath)
+                    localizationController.delegate = delegate
+                    try localizationController.parse()
+                    try localizationController.write()
+                }
             }
         }
     }
