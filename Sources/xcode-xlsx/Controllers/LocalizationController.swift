@@ -15,17 +15,18 @@ final class LocalizationController {
     private let localizationResourceName: String
     private let xcodeLocalizationMainPath: String
     private let workSheetPath: String
-    private var localizationsDictionary: [String: [String: String]] = [:]
-
+    private var createDictionary: [String: [String: String]] = [:]
+    private var updateDictionary: [String: [String: String]] = [:]
+    
     enum ParseError: Error, LocalizedError {
         case sharedStrings
-        case data
+        case dataXLSX
 
         public var errorDescription: String? {
             switch self {
             case .sharedStrings:
                 return "XLSX shared strings not found"
-            case .data:
+            case .dataXLSX:
                 return "XLSX data error"
             }
         }
@@ -48,15 +49,16 @@ final class LocalizationController {
         guard let sharedStrings = try xlsxFile.parseSharedStrings() else { throw ParseError.sharedStrings}
         guard let data = worksheet.data,
               let keyRow = data.rows.first
-        else { throw ParseError.data }
+        else { throw ParseError.dataXLSX }
         let keysArray = keyRow.cells.dropFirst().compactMap { $0.stringValue(sharedStrings) }
+        let dataArray = data.rows.dropFirst()
         try keysArray.forEach {
             let xcodeLocalizationFilePath = xcodeLocalizationFilePath(for: $0)
-            localizationsDictionary[$0] = try parseXcodeTranslations(fileURL: xcodeLocalizationFilePath)
+            createDictionary[$0] = [:]
+            updateDictionary[$0] = try parseXcodeTranslations(fileURL: xcodeLocalizationFilePath)
         }
-        let dataArray = data.rows.dropFirst()
-        dataArray.forEach {
-            parse(rowCells: $0.cells, keysArray: keysArray, sharedStrings: sharedStrings)
+        try dataArray.forEach {
+            try populateDictionariesWithXls(rowCells: $0.cells, keysArray: keysArray, sharedStrings: sharedStrings)
         }
     }
 
@@ -65,15 +67,27 @@ final class LocalizationController {
     /// - Postcondition: After completing this method the parsed localizations will be written to the corresponding `.strings` files.
     /// - Throws: An error if there is an issue writing the localizations.
     func write() throws {
-        try localizationsDictionary.forEach {
-            let xcodeLocalizationFilePath = xcodeLocalizationFilePath(for: $0.key)
+        try updateDictionary.forEach { (language, translations) in
+            let xcodeLocalizationFilePath = xcodeLocalizationFilePath(for: language)
             delegate?.showAction("Writing to \(xcodeLocalizationFilePath.path.green()):")
-            try xcodeLocalizationFilePath.eraseContent()
-            let sortedLocalizations = localizationsDictionary[$0.key]?.sorted{ $0.key < $1.key } ?? []
-            try sortedLocalizations.forEach({ (key: String, value: String) in
-                let newLocalization = ("\"\(key)\" = \"\(value)\";\n")
-                try newLocalization.write(to: xcodeLocalizationFilePath)
+            var originalContent = try String(contentsOf: xcodeLocalizationFilePath)
+
+            translations.forEach { (key, value) in
+                let regexPattern = "\"\(key)\"\\s*=\\s*\"([^\"]*)\";"
+                let replacement = "\"\(key)\" = \"\(value)\";"
+                originalContent = originalContent.replacingOccurrences(
+                    of: regexPattern,
+                    with: replacement,
+                    options: .regularExpression
+                )
+            }
+
+            createDictionary[language]?.forEach({ (key, value) in
+                let newLocalizationEntry = "\"\(key)\" = \"\(value)\";\n\n"
+                originalContent.append(newLocalizationEntry)
             })
+            
+            try originalContent.write(to: xcodeLocalizationFilePath, atomically: true, encoding: .utf8)
         }
     }
 
@@ -86,16 +100,20 @@ final class LocalizationController {
         URL(fileURLWithPath: "\(xcodeLocalizationMainPath)/\(languageKey)/\(localizationResourceName)")
     }
     
-    /// Parses the row cells and updates the `xcodeLocalizations` dictionary.
+    /// Parses the row cells and updates the `createDictionary` and `updateDictionary` dictionaries respectively.
     /// - Parameters:
     ///   - rowCells: The cells of the row containing localization values.
     ///   - keysArray: An array of keys corresponding to the columns in the worksheet.
     ///   - sharedStrings: The shared strings used for cell values.
-    private func parse(rowCells: [Cell], keysArray: [String], sharedStrings: SharedStrings) {
-        guard let key = rowCells.first?.stringValue(sharedStrings) else { return }
+    private func populateDictionariesWithXls(rowCells: [Cell], keysArray: [String], sharedStrings: SharedStrings) throws {
+        guard let key = rowCells.first?.stringValue(sharedStrings) else { throw ParseError.dataXLSX }
         for (index, cell) in rowCells.dropFirst().enumerated() {
             if let value = cell.stringValue(sharedStrings) {
-                localizationsDictionary[keysArray[index]]?[key] = value
+                if updateDictionary[keysArray[index]]?[key] == nil {
+                    createDictionary[keysArray[index]]?[key] = value
+                } else {
+                    updateDictionary[keysArray[index]]?[key] = value
+                }
             }
         }
     }
@@ -105,23 +123,9 @@ final class LocalizationController {
     /// - Returns: A dictionary containing the parsed translations.
     /// - Throws: An error if there is an issue reading the file.
     private func parseXcodeTranslations(fileURL: URL) throws -> [String: String] {
-        let fileContent = try String(contentsOf: fileURL, encoding: .utf8)
-        var translations: [String: String] = [:]
-        let pattern = #""([^"]+)"\s*=\s*"([^"]+)";"#
-        let regex = try NSRegularExpression(pattern: pattern, options: [])
-        let matches = regex.matches(in: fileContent, options: [], range: NSRange(location: 0, length: fileContent.utf16.count))
-
-        for match in matches {
-            guard
-                let keyRange = Range(match.range(at: 1), in: fileContent),
-                let valueRange = Range(match.range(at: 2), in: fileContent)
-            else { continue }
-            let key = String(fileContent[keyRange])
-            let value = String(fileContent[valueRange])
-            translations[key] = value
-        }
-        
-        return translations
+        let data = try Data(contentsOf: fileURL)
+        let decoder = PropertyListDecoder()
+        return try decoder.decode([String: String].self, from: data)
     }
 
 }
