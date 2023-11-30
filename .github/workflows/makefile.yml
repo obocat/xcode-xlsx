@@ -16,15 +16,3 @@ jobs:
 
     - name: Build
       run: make install
-
-    - name: Upload Artifact
-      uses: actions/upload-artifact@v2
-      with:
-        name: xcode-xlsx
-        path: /usr/local/bin/xcode-xlsx
-
-    - name: Download Artifact
-      uses: actions/download-artifact@v2
-      with:
-        name: xcode-xlsx
-        path: .
